@@ -26,14 +26,41 @@ type Server struct {
 	Txm      txmanager.TxManager
 }
 
+type tripDataRaw struct {
+	UserId     *openapi_types.UUID `json:"user_id"`
+	DriverId   *openapi_types.UUID `json:"driver_id"`
+	StartPoint *coordinatesRaw     `json:"start_point"`
+	EndPoint   *coordinatesRaw     `json:"end_point"`
+	Price      *int64              `json:"price"`
+}
+
+type coordinatesRaw struct {
+	Latitude  *float64 `json:"latitude"`
+	Longitude *float64 `json:"longitude"`
+}
+
 func (s *Server) CreateTrip(w http.ResponseWriter, r *http.Request, params api.CreateTripParams) {
-	var req api.CreateTripJSONRequestBody
+	var raw tripDataRaw
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
-	if err := dec.Decode(&req); err != nil {
+	if err := dec.Decode(&raw); err != nil {
 		writeProblemJSON(w, r, http.StatusBadRequest,
 			"invalid_request", "Invalid request", "invalid-request", "JSON decoding failed")
 		return
+	}
+
+	if detail := validateTripDataRequired(raw); detail != "" {
+		writeProblemJSON(w, r, http.StatusBadRequest,
+			"invalid_request", "Invalid request", "invalid-request", detail)
+		return
+	}
+
+	req := api.CreateTripJSONRequestBody{
+		UserId:     *raw.UserId,
+		DriverId:   *raw.DriverId,
+		StartPoint: api.Coordinates{Latitude: *raw.StartPoint.Latitude, Longitude: *raw.StartPoint.Longitude},
+		EndPoint:   api.Coordinates{Latitude: *raw.EndPoint.Latitude, Longitude: *raw.EndPoint.Longitude},
+		Price:      *raw.Price,
 	}
 
 	if detail := validateTripData(req); detail != "" {
@@ -105,7 +132,7 @@ func (s *Server) FinishTrip(w http.ResponseWriter, r *http.Request, tripId api.T
 	})
 	if err != nil {
 		if errors.Is(err, domain.ErrTripNotFound) {
-			writeProblemJSON(w, r, http.StatusConflict,
+			writeProblemJSON(w, r, http.StatusNotFound,
 				"trip_not_found", "Trip not found", "trip-not-found", "Trip was not found")
 			return
 		}
@@ -124,32 +151,6 @@ func (s *Server) FinishTrip(w http.ResponseWriter, r *http.Request, tripId api.T
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(trip)
-}
-
-func validateTripData(req api.CreateTripJSONRequestBody) string {
-	if req.UserId == (openapi_types.UUID{}) {
-		return "user_id must be non-empty uuid"
-	}
-
-	if req.DriverId == (openapi_types.UUID{}) {
-		return "driver_id must be non-empty uuid"
-	}
-
-	if !(-90 < req.StartPoint.Latitude && req.StartPoint.Latitude < 90) ||
-		!(-180 < req.StartPoint.Longitude && req.StartPoint.Longitude < 180) {
-		return "invalid start point coords"
-	}
-
-	if !(-90 < req.EndPoint.Latitude && req.EndPoint.Latitude < 90) ||
-		!(-180 < req.EndPoint.Longitude && req.EndPoint.Longitude < 180) {
-		return "invalid end point coords"
-	}
-
-	if req.Price < 0 {
-		return "price must be non-negative"
-	}
-
-	return ""
 }
 
 func (s *Server) Health(w http.ResponseWriter, r *http.Request) {
