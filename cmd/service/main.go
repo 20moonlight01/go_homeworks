@@ -1,9 +1,47 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"log"
+	"net/http"
+	"os/signal"
+	"syscall"
+
+	"github.com/20moonlight01/go_homeworks/internal/config"
+	"github.com/20moonlight01/go_homeworks/internal/container"
 )
 
 func main() {
-	log.Println("service starting...")
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("config load failed: %v", err)
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	c, err := container.New(ctx, cfg)
+	if err != nil {
+		log.Fatalf("container init failed: %v", err)
+	}
+	defer c.Close()
+
+	go func() {
+		c.Logger.Info("starting server", "addr", cfg.HTTPAddr)
+		if err := c.Server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("server error: %v", err)
+		}
+	}()
+
+	<-ctx.Done()
+	c.Logger.Info("waiting for active requests on termination signal")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
+	defer cancel()
+
+	if err := c.Server.Shutdown(shutdownCtx); err != nil {
+		log.Printf("shutdown error: %v", err)
+	}
+	c.Logger.Info("service stopped")
 }
