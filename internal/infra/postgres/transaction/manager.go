@@ -37,11 +37,11 @@ func (m *Manager) Do(ctx context.Context, fn func(ctx context.Context) error) (e
 
 	defer func() {
 		if p := recover(); p != nil {
-			tx.Rollback(ctx)
+			_ = tx.Rollback(ctx)
 			panic(p)
 		}
 		if err != nil {
-			tx.Rollback(ctx)
+			_ = tx.Rollback(ctx)
 		}
 	}()
 

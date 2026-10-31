@@ -21,10 +21,10 @@ func NewHandler(p Pinger) *Handler {
 	return &Handler{pinger: p}
 }
 
-func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Health(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(api.HealthResponse{Status: api.Ok})
+	_ = json.NewEncoder(w).Encode(api.HealthResponse{Status: api.Ok})
 }
 
 func (h *Handler) Ready(w http.ResponseWriter, r *http.Request) {
@@ -35,10 +35,10 @@ func (h *Handler) Ready(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.pinger.Ping(checkCtx); err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(api.HealthResponse{Status: api.Unavailable})
+		_ = json.NewEncoder(w).Encode(api.HealthResponse{Status: api.Unavailable})
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(api.HealthResponse{Status: api.Ok})
+	_ = json.NewEncoder(w).Encode(api.HealthResponse{Status: api.Ok})
 }

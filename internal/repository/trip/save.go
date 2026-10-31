@@ -5,8 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	domain "github.com/20moonlight01/go_homeworks/internal/domain/trip"
 	"github.com/jackc/pgx/v5/pgconn"
+
+	domain "github.com/20moonlight01/go_homeworks/internal/domain/trip"
 )
 
 const pgUniqueViolationCode = "23505"

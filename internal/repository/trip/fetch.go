@@ -7,9 +7,10 @@ import (
 	"time"
 	"uuid"
 
-	domain "github.com/20moonlight01/go_homeworks/internal/domain/trip"
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5"
+
+	domain "github.com/20moonlight01/go_homeworks/internal/domain/trip"
 )
 
 func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Trip, error) {
@@ -53,7 +54,6 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Trip, e
 			&trip.StartedAt,
 			&finishedAt,
 		)
-
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, domain.ErrTripNotFound

@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/20moonlight01/go_homeworks/internal/config"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/20moonlight01/go_homeworks/internal/config"
 )
 
 func NewPool(ctx context.Context, cfg *config.Config) (*pgxpool.Pool, error) {

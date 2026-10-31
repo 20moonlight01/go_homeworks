@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"net/http"
 
+	openapi "github.com/oapi-codegen/runtime/types"
+
 	"github.com/20moonlight01/go_homeworks/internal/domain/trip"
 	api "github.com/20moonlight01/go_homeworks/internal/generated"
 	"github.com/20moonlight01/go_homeworks/internal/http/domainerror"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 type Handler struct {
@@ -19,11 +20,11 @@ func NewHandler(uc createUsecase) *Handler {
 }
 
 type tripDataRaw struct {
-	UserId     *openapi_types.UUID `json:"user_id"`
-	DriverId   *openapi_types.UUID `json:"driver_id"`
-	StartPoint *coordinatesRaw     `json:"start_point"`
-	EndPoint   *coordinatesRaw     `json:"end_point"`
-	Price      *int64              `json:"price"`
+	UserId     *openapi.UUID   `json:"user_id"`
+	DriverId   *openapi.UUID   `json:"driver_id"`
+	StartPoint *coordinatesRaw `json:"start_point"`
+	EndPoint   *coordinatesRaw `json:"end_point"`
+	Price      *int64          `json:"price"`
 }
 
 type coordinatesRaw struct {
@@ -31,7 +32,7 @@ type coordinatesRaw struct {
 	Longitude *float64 `json:"longitude"`
 }
 
-func (h *Handler) CreateTrip(w http.ResponseWriter, r *http.Request, params api.CreateTripParams) {
+func (h *Handler) CreateTrip(w http.ResponseWriter, r *http.Request, _ api.CreateTripParams) {
 	var raw tripDataRaw
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
@@ -68,5 +69,5 @@ func (h *Handler) CreateTrip(w http.ResponseWriter, r *http.Request, params api.
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Location", "/api/v1/trips/"+resp.Id.String())
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }

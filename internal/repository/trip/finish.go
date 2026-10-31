@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"uuid"
 
-	domain "github.com/20moonlight01/go_homeworks/internal/domain/trip"
 	sq "github.com/Masterminds/squirrel"
+
+	domain "github.com/20moonlight01/go_homeworks/internal/domain/trip"
 )
 
 func (r *Repository) Finish(ctx context.Context, id uuid.UUID) (*domain.Trip, error) {

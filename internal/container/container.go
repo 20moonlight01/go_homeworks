@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/20moonlight01/go_homeworks/internal/config"
 	domain "github.com/20moonlight01/go_homeworks/internal/domain/trip"
 	api "github.com/20moonlight01/go_homeworks/internal/generated"
@@ -22,8 +25,6 @@ import (
 	"github.com/20moonlight01/go_homeworks/internal/usecase/trip/create"
 	"github.com/20moonlight01/go_homeworks/internal/usecase/trip/finish"
 	"github.com/20moonlight01/go_homeworks/internal/usecase/trip/get"
-	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Container struct {

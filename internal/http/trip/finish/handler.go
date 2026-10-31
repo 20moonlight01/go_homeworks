@@ -26,5 +26,5 @@ func (h *Handler) FinishTrip(w http.ResponseWriter, r *http.Request, tripId api.
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(toAPIResponse(t))
+	_ = json.NewEncoder(w).Encode(toAPIResponse(t))
 }

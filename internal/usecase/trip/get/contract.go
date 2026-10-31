@@ -2,7 +2,6 @@ package get
 
 import (
 	"context"
-
 	"uuid"
 
 	"github.com/20moonlight01/go_homeworks/internal/domain/trip"

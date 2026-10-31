@@ -36,21 +36,22 @@ func NewTrip(
 	startLongitude float64,
 	endLatitude float64,
 	endLongitude float64,
-	price int64) (*Trip, error) {
+	price int64,
+) (*Trip, error) {
 	if price < 0 {
 		return nil, &ValidationError{Field: "price", Message: "must be non-negative"}
 	}
 	if startLatitude < -90 || startLatitude > 90 {
-		return nil, &ValidationError{Field: "start_point.latitude", Message: "out of range"}
+		return nil, &ValidationError{Field: "start_point.latitude", Message: msgOutOfRange}
 	}
 	if startLongitude < -180 || startLongitude > 180 {
-		return nil, &ValidationError{Field: "start_point.longitude", Message: "out of range"}
+		return nil, &ValidationError{Field: "start_point.longitude", Message: msgOutOfRange}
 	}
 	if endLatitude < -90 || endLatitude > 90 {
-		return nil, &ValidationError{Field: "end_point.latitude", Message: "out of range"}
+		return nil, &ValidationError{Field: "end_point.latitude", Message: msgOutOfRange}
 	}
 	if endLongitude < -180 || endLongitude > 180 {
-		return nil, &ValidationError{Field: "end_point.longitude", Message: "out of range"}
+		return nil, &ValidationError{Field: "end_point.longitude", Message: msgOutOfRange}
 	}
 
 	return &Trip{

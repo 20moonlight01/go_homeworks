@@ -23,7 +23,8 @@ func main() {
 
 	c, err := container.New(ctx, cfg)
 	if err != nil {
-		log.Fatalf("container init failed: %v", err)
+		log.Printf("container init failed: %v", err)
+		return
 	}
 	defer c.Close()
 

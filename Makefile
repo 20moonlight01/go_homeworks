@@ -8,7 +8,7 @@ ifneq (,$(wildcard ./.env.local))
     export
 endif
 
-.PHONY: run migrate migrate-down migrate-status generate test
+.PHONY: run migrate migrate-down migrate-status generate test lint
 
 run:
 	go run ./cmd/trip-service
@@ -31,3 +31,6 @@ generate:
 
 test:
 	go test -race ./...
+
+lint:
+	golangci-lint run

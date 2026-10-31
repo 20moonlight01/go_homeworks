@@ -21,15 +21,19 @@ type apiAdapter struct {
 func (a *apiAdapter) CreateTrip(w http.ResponseWriter, r *http.Request, params api.CreateTripParams) {
 	a.create.CreateTrip(w, r, params)
 }
+
 func (a *apiAdapter) GetTrip(w http.ResponseWriter, r *http.Request, tripId api.TripId) {
 	a.get.GetTrip(w, r, tripId)
 }
+
 func (a *apiAdapter) FinishTrip(w http.ResponseWriter, r *http.Request, tripId api.TripId) {
 	a.finish.FinishTrip(w, r, tripId)
 }
+
 func (a *apiAdapter) Health(w http.ResponseWriter, r *http.Request) {
 	a.service.Health(w, r)
 }
+
 func (a *apiAdapter) Ready(w http.ResponseWriter, r *http.Request) {
 	a.service.Ready(w, r)
 }

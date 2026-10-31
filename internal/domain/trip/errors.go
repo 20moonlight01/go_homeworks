@@ -16,3 +16,5 @@ type ValidationError struct {
 func (e *ValidationError) Error() string {
 	return e.Field + ": " + e.Message
 }
+
+const msgOutOfRange = "out of range"
