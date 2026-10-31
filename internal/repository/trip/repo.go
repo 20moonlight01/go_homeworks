@@ -1,4 +1,4 @@
-package repository
+package trip
 
 import (
 	"context"
@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/20moonlight01/go_homeworks/internal/db"
-	"github.com/20moonlight01/go_homeworks/internal/domain"
+	domain "github.com/20moonlight01/go_homeworks/internal/domain/trip"
 	api "github.com/20moonlight01/go_homeworks/internal/generated"
+	"github.com/20moonlight01/go_homeworks/internal/infra/postgres/transaction"
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -36,7 +36,7 @@ func (r *TripRepository) Create(ctx context.Context, trip api.Trip) (api.Trip, e
 	ctx, cancel := context.WithTimeout(ctx, r.queryTimeout)
 	defer cancel()
 
-	exec := db.GetExecutor(ctx, r.pool)
+	exec := transaction.GetExecutor(ctx, r.pool)
 
 	sqlText, args, err := psqlBuilder.
 		Insert("trips").
@@ -89,7 +89,7 @@ func (r *TripRepository) GetByID(ctx context.Context, id openapi_types.UUID) (ap
 	ctx, cancel := context.WithTimeout(ctx, r.queryTimeout)
 	defer cancel()
 
-	exec := db.GetExecutor(ctx, r.pool)
+	exec := transaction.GetExecutor(ctx, r.pool)
 
 	sqlText, args, err := psqlBuilder.
 		Select(
@@ -145,7 +145,7 @@ func (r *TripRepository) Finish(ctx context.Context, id openapi_types.UUID) (api
 	ctx, cancel := context.WithTimeout(ctx, r.queryTimeout)
 	defer cancel()
 
-	exec := db.GetExecutor(ctx, r.pool)
+	exec := transaction.GetExecutor(ctx, r.pool)
 
 	sqlText, args, err := psqlBuilder.
 		Update("trips").

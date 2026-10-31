@@ -1,4 +1,4 @@
-package handler
+package domainerror
 
 import (
 	"encoding/json"

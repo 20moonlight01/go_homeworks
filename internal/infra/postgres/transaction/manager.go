@@ -1,10 +1,9 @@
-package txmanager
+package transaction
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/20moonlight01/go_homeworks/internal/db"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -26,7 +25,7 @@ func NewManager(pool *pgxpool.Pool) *Manager {
 }
 
 func (m *Manager) Do(ctx context.Context, fn func(ctx context.Context) error) (err error) {
-	tx, ok := db.GetTxFromContext(ctx)
+	tx, ok := GetTxFromContext(ctx)
 	if ok {
 		return fn(ctx)
 	}
@@ -46,7 +45,7 @@ func (m *Manager) Do(ctx context.Context, fn func(ctx context.Context) error) (e
 		}
 	}()
 
-	if err = fn(db.PutTxIntoContext(ctx, tx)); err != nil {
+	if err = fn(PutTxIntoContext(ctx, tx)); err != nil {
 		return err
 	}
 

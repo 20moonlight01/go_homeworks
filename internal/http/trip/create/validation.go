@@ -1,4 +1,4 @@
-package handler
+package create
 
 import (
 	api "github.com/20moonlight01/go_homeworks/internal/generated"
