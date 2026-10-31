@@ -11,7 +11,7 @@ import (
 
 const pgUniqueViolationCode = "23505"
 
-func (r *Repository) Create(ctx context.Context, trip domain.Trip) error {
+func (r *Repository) Save(ctx context.Context, trip *domain.Trip) error {
 	ctx, cancel := context.WithTimeout(ctx, r.queryTimeout)
 	defer cancel()
 

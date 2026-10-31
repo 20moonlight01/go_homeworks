@@ -11,6 +11,9 @@ import (
 	"github.com/20moonlight01/go_homeworks/internal/infra/postgres"
 	"github.com/20moonlight01/go_homeworks/internal/infra/postgres/transaction"
 	"github.com/20moonlight01/go_homeworks/internal/repository/trip"
+	"github.com/20moonlight01/go_homeworks/internal/usecase/trip/create"
+	"github.com/20moonlight01/go_homeworks/internal/usecase/trip/finish"
+	"github.com/20moonlight01/go_homeworks/internal/usecase/trip/get"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -32,6 +35,10 @@ func New(ctx context.Context, cfg *config.Config) (*Container, error) {
 	txManager := transaction.NewManager(pool)
 
 	tripRepo := trip.NewRepository(pool, cfg.DBQueryTimeout)
+
+	createUC := create.NewUsecase(tripRepo, txManager)
+	getUC := get.NewUsecase(tripRepo)
+	finishUC := finish.NewUsecase(tripRepo, txManager)
 
 	mux := http.NewServeMux()
 

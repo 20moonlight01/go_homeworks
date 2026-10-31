@@ -54,6 +54,7 @@ func NewTrip(
 	}
 
 	return &Trip{
+		Id:       uuid.New(),
 		UserId:   userId,
 		DriverId: driverId,
 		StartPoint: Point{
