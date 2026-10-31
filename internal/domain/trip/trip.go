@@ -2,7 +2,8 @@ package trip
 
 import (
 	"time"
-	"uuid"
+
+	"github.com/google/uuid"
 )
 
 type Status string

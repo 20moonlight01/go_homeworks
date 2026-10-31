@@ -2,7 +2,8 @@ package create
 
 import (
 	"context"
-	"uuid"
+
+	"github.com/google/uuid"
 
 	"github.com/20moonlight01/go_homeworks/internal/domain/trip"
 )

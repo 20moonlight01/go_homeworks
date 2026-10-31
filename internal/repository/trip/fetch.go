@@ -5,7 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
-	"uuid"
+
+	"github.com/google/uuid"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5"

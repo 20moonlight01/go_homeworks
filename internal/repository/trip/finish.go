@@ -4,7 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"uuid"
+
+	"github.com/google/uuid"
 
 	sq "github.com/Masterminds/squirrel"
 

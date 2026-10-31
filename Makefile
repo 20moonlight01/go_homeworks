@@ -8,7 +8,7 @@ ifneq (,$(wildcard ./.env.local))
     export
 endif
 
-.PHONY: run migrate migrate-down migrate-status generate test lint
+.PHONY: run migrate migrate-down migrate-status generate test test-integration lint
 
 run:
 	go run ./cmd/trip-service
@@ -30,7 +30,10 @@ generate:
 		contracts/openapi/trip-service.openapi.yaml
 
 test:
-	go test -race ./...
+	go test -race -cover ./...
+
+test-integration:
+	go test -tags=integration -v ./internal/repository/...
 
 lint:
 	golangci-lint run

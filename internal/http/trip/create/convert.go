@@ -1,7 +1,7 @@
 package create
 
 import (
-	"uuid"
+	"github.com/google/uuid"
 
 	openapi "github.com/oapi-codegen/runtime/types"
 

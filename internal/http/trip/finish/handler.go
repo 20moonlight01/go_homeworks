@@ -3,7 +3,8 @@ package finish
 import (
 	"encoding/json"
 	"net/http"
-	"uuid"
+
+	"github.com/google/uuid"
 
 	api "github.com/20moonlight01/go_homeworks/internal/generated"
 	"github.com/20moonlight01/go_homeworks/internal/http/domainerror"
