@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/google/uuid"
-
 	api "github.com/20moonlight01/go_homeworks/internal/generated"
 	"github.com/20moonlight01/go_homeworks/internal/http/domainerror"
 )
@@ -19,7 +17,7 @@ func NewHandler(uc finishUsecase) *Handler {
 }
 
 func (h *Handler) FinishTrip(w http.ResponseWriter, r *http.Request, tripId api.TripId) {
-	t, err := h.uc.Execute(r.Context(), uuid.UUID(tripId))
+	t, err := h.uc.Execute(r.Context(), tripId)
 	if err != nil {
 		domainerror.Write(w, r, err)
 		return

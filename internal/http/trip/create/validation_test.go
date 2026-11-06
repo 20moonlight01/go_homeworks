@@ -14,14 +14,19 @@ import (
 	"github.com/20moonlight01/go_homeworks/internal/http/trip/create"
 )
 
+const (
+	fieldUserId   = "user_id"
+	fieldDriverId = "driver_id"
+)
+
 func TestHandler_CreateTrip_Validation(t *testing.T) {
 	getValidBody := func() map[string]interface{} {
 		return map[string]interface{}{
-			"user_id":     "5cb72c04-7650-45c9-a79b-bcdba0631e0c",
-			"driver_id":   "8860b315-ec86-42eb-a17c-7c163d721ff5",
+			fieldUserId:   "5cb72c04-7650-45c9-a79b-bcdba0631e0c",
+			fieldDriverId: "8860b315-ec86-42eb-a17c-7c163d721ff5",
 			"start_point": map[string]interface{}{"latitude": 59.9398, "longitude": 30.3146},
 			"end_point":   map[string]interface{}{"latitude": 59.929, "longitude": 30.3626},
-			"price":       1450,
+			fieldPrice:    1450,
 		}
 	}
 
@@ -32,13 +37,13 @@ func TestHandler_CreateTrip_Validation(t *testing.T) {
 	}{
 		{
 			name:      "missing user_id",
-			mutate:    func(m map[string]interface{}) { delete(m, "user_id") },
-			wantField: "user_id",
+			mutate:    func(m map[string]interface{}) { delete(m, fieldUserId) },
+			wantField: fieldUserId,
 		},
 		{
 			name:      "missing driver_id",
-			mutate:    func(m map[string]interface{}) { delete(m, "driver_id") },
-			wantField: "driver_id",
+			mutate:    func(m map[string]interface{}) { delete(m, fieldDriverId) },
+			wantField: fieldDriverId,
 		},
 		{
 			name:      "missing start_point",
@@ -52,8 +57,8 @@ func TestHandler_CreateTrip_Validation(t *testing.T) {
 		},
 		{
 			name:      "missing price",
-			mutate:    func(m map[string]interface{}) { delete(m, "price") },
-			wantField: "price",
+			mutate:    func(m map[string]interface{}) { delete(m, fieldPrice) },
+			wantField: fieldPrice,
 		},
 		{
 			name: "missing start_point.latitude",
@@ -90,16 +95,16 @@ func TestHandler_CreateTrip_Validation(t *testing.T) {
 		{
 			name: "empty user_id (zero UUID)",
 			mutate: func(m map[string]interface{}) {
-				m["user_id"] = "00000000-0000-0000-0000-000000000000"
+				m[fieldUserId] = "00000000-0000-0000-0000-000000000000"
 			},
-			wantField: "user_id",
+			wantField: fieldUserId,
 		},
 		{
 			name: "empty driver_id (zero UUID)",
 			mutate: func(m map[string]interface{}) {
-				m["driver_id"] = "00000000-0000-0000-0000-000000000000"
+				m[fieldDriverId] = "00000000-0000-0000-0000-000000000000"
 			},
-			wantField: "driver_id",
+			wantField: fieldDriverId,
 		},
 	}
 

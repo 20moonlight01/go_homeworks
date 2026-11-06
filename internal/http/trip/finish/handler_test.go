@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -31,7 +30,7 @@ func TestHandler_FinishTrip(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/trips/"+tripID.String()+"/finish", nil)
 		rec := httptest.NewRecorder()
 
-		h.FinishTrip(rec, req, api.TripId(tripID))
+		h.FinishTrip(rec, req, tripID)
 
 		assert.Equal(t, http.StatusOK, rec.Code)
 		var resp api.Trip
@@ -50,7 +49,7 @@ func TestHandler_FinishTrip(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/trips/"+tripID.String()+"/finish", nil)
 		rec := httptest.NewRecorder()
 
-		h.FinishTrip(rec, req, api.TripId(tripID))
+		h.FinishTrip(rec, req, tripID)
 
 		assert.Equal(t, http.StatusConflict, rec.Code)
 		var prob api.Problem

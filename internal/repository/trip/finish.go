@@ -5,9 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/google/uuid"
-
 	sq "github.com/Masterminds/squirrel"
+	"github.com/google/uuid"
 
 	domain "github.com/20moonlight01/go_homeworks/internal/domain/trip"
 )

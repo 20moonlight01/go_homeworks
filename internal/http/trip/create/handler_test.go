@@ -9,13 +9,16 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
 	"github.com/20moonlight01/go_homeworks/internal/domain/trip"
 	api "github.com/20moonlight01/go_homeworks/internal/generated"
 	"github.com/20moonlight01/go_homeworks/internal/http/trip/create"
+)
+
+const (
+	fieldPrice = "price"
 )
 
 func TestHandler_CreateTrip(t *testing.T) {
@@ -89,7 +92,7 @@ func TestHandler_CreateTrip(t *testing.T) {
 		defer ctrl.Finish()
 
 		mockUC := NewMockcreateUsecase(ctrl)
-		valErr := &trip.ValidationError{Field: "price", Message: "must be non-negative"}
+		valErr := &trip.ValidationError{Field: fieldPrice, Message: "must be non-negative"}
 		mockUC.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(nil, valErr)
 
 		h := create.NewHandler(mockUC)

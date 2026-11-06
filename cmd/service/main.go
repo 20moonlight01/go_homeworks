@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
 
@@ -31,7 +32,8 @@ func main() {
 	go func() {
 		c.Logger.Info("starting server", "addr", cfg.HTTPAddr)
 		if err := c.Server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("server error: %v", err)
+			c.Logger.Error("server error", "error", err)
+			os.Exit(1)
 		}
 	}()
 
@@ -42,7 +44,7 @@ func main() {
 	defer cancel()
 
 	if err := c.Server.Shutdown(shutdownCtx); err != nil {
-		log.Printf("shutdown error: %v", err)
+		c.Logger.Error("shutdown error", "error", err)
 	}
 	c.Logger.Info("service stopped")
 }

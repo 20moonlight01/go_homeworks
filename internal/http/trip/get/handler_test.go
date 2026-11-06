@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -31,7 +30,7 @@ func TestHandler_GetTrip(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/trips/"+tripID.String(), nil)
 		rec := httptest.NewRecorder()
 
-		h.GetTrip(rec, req, api.TripId(tripID))
+		h.GetTrip(rec, req, tripID)
 
 		assert.Equal(t, http.StatusOK, rec.Code)
 		var resp api.Trip
@@ -50,7 +49,7 @@ func TestHandler_GetTrip(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/trips/"+tripID.String(), nil)
 		rec := httptest.NewRecorder()
 
-		h.GetTrip(rec, req, api.TripId(tripID))
+		h.GetTrip(rec, req, tripID)
 
 		assert.Equal(t, http.StatusNotFound, rec.Code)
 		var prob api.Problem

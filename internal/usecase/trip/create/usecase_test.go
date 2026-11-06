@@ -3,15 +3,16 @@ package create_test
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"testing"
 
 	"github.com/google/uuid"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/20moonlight01/go_homeworks/internal/domain/trip"
+	"github.com/20moonlight01/go_homeworks/internal/infra/telemetry"
 	"github.com/20moonlight01/go_homeworks/internal/usecase/trip/create"
 )
 
@@ -32,6 +33,8 @@ func TestUsecase_Execute(t *testing.T) {
 
 		mockRepo := NewMocktripRepository(ctrl)
 		mockTx := NewMocktxManager(ctrl)
+		logger := telemetry.NewLogger(slog.LevelInfo)
+		metrics := telemetry.NewNoopMetrics()
 
 		mockTx.EXPECT().Do(gomock.Any(), gomock.Any()).DoAndReturn(
 			func(ctx context.Context, fn func(context.Context) error) error {
@@ -40,7 +43,7 @@ func TestUsecase_Execute(t *testing.T) {
 		)
 		mockRepo.EXPECT().Save(gomock.Any(), gomock.Any()).Return(nil)
 
-		uc := create.NewUsecase(mockRepo, mockTx)
+		uc := create.NewUsecase(mockRepo, mockTx, logger, metrics)
 		tripData, err := uc.Execute(context.Background(), validReq)
 
 		require.NoError(t, err)
@@ -56,8 +59,10 @@ func TestUsecase_Execute(t *testing.T) {
 
 		mockRepo := NewMocktripRepository(ctrl)
 		mockTx := NewMocktxManager(ctrl)
+		logger := telemetry.NewLogger(slog.LevelInfo)
+		metrics := telemetry.NewNoopMetrics()
 
-		uc := create.NewUsecase(mockRepo, mockTx)
+		uc := create.NewUsecase(mockRepo, mockTx, logger, metrics)
 
 		invalidReq := validReq
 		invalidReq.Price = -1
@@ -76,6 +81,8 @@ func TestUsecase_Execute(t *testing.T) {
 
 		mockRepo := NewMocktripRepository(ctrl)
 		mockTx := NewMocktxManager(ctrl)
+		logger := telemetry.NewLogger(slog.LevelInfo)
+		metrics := telemetry.NewNoopMetrics()
 
 		mockTx.EXPECT().Do(gomock.Any(), gomock.Any()).DoAndReturn(
 			func(ctx context.Context, fn func(context.Context) error) error {
@@ -84,7 +91,7 @@ func TestUsecase_Execute(t *testing.T) {
 		)
 		mockRepo.EXPECT().Save(gomock.Any(), gomock.Any()).Return(trip.ErrDriverBusy)
 
-		uc := create.NewUsecase(mockRepo, mockTx)
+		uc := create.NewUsecase(mockRepo, mockTx, logger, metrics)
 		_, err := uc.Execute(context.Background(), validReq)
 
 		require.Error(t, err)
