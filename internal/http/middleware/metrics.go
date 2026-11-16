@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -27,39 +28,35 @@ var (
 
 func Metrics(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		initialAttrs := metric.WithAttributes(
-			attribute.String("http.request.method", r.Method),
-		)
-
-		activeRequests.Add(r.Context(), 1, initialAttrs)
-
-		defer func() {
-			route := chi.RouteContext(r.Context()).RoutePattern()
-			if route == "" {
-				route = r.URL.Path
+		route := "unknown"
+		if rctx := chi.RouteContext(r.Context()); rctx != nil && rctx.Routes != nil {
+			tmpCtx := chi.NewRouteContext()
+			if rctx.Routes.Match(tmpCtx, r.Method, r.URL.Path) {
+				route = tmpCtx.RoutePattern()
 			}
-			finalAttrs := metric.WithAttributes(
-				attribute.String("http.request.method", r.Method),
-				attribute.String("http.route", route),
-			)
-			activeRequests.Add(r.Context(), -1, finalAttrs)
-		}()
+		}
+		route = strings.TrimSuffix(route, "/*")
+		if route == "" {
+			route = "unknown"
+		}
+
+		attrs := metric.WithAttributes(
+			attribute.String("http.request.method", r.Method),
+			attribute.String("http.route", route),
+		)
+		activeRequests.Add(r.Context(), 1, attrs)
+		defer activeRequests.Add(r.Context(), -1, attrs)
 
 		start := time.Now()
 		rec := &statusRecorder{ResponseWriter: w, status: 0}
 		next.ServeHTTP(rec, r)
 
-		duration := time.Since(start).Seconds()
-		route := chi.RouteContext(r.Context()).RoutePattern()
-		if route == "" {
-			route = r.URL.Path
-		}
-
-		attrs := []attribute.KeyValue{
-			attribute.String("http.request.method", r.Method),
-			attribute.String("http.route", route),
-			attribute.Int("http.response.status_code", rec.status),
-		}
-		requestDuration.Record(r.Context(), duration, metric.WithAttributes(attrs...))
+		requestDuration.Record(r.Context(), time.Since(start).Seconds(),
+			metric.WithAttributes(
+				attribute.String("http.request.method", r.Method),
+				attribute.String("http.route", route),
+				attribute.Int("http.response.status_code", rec.status),
+			),
+		)
 	})
 }
