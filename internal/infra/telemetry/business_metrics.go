@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"context"
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel"
@@ -14,6 +15,24 @@ type Metrics struct {
 	TripsCreated   metric.Int64Counter
 	TripsCompleted metric.Int64Counter
 	TripsActive    metric.Int64Gauge
+}
+
+func (m *Metrics) IncTripsCreated(ctx context.Context) {
+	m.TripsCreated.Add(ctx, 1)
+}
+
+func (m *Metrics) IncTripsCompleted(ctx context.Context) {
+	m.TripsCompleted.Add(ctx, 1)
+}
+
+func (m *Metrics) IncTripsActive(ctx context.Context) {
+	n := ActiveTripsCount.Add(1)
+	m.TripsActive.Record(ctx, n)
+}
+
+func (m *Metrics) DecTripsActive(ctx context.Context) {
+	n := ActiveTripsCount.Add(-1)
+	m.TripsActive.Record(ctx, n)
 }
 
 func NewMetrics() (*Metrics, error) {

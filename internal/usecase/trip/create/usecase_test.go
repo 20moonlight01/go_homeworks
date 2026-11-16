@@ -3,6 +3,7 @@ package create_test
 import (
 	"context"
 	"errors"
+	"io"
 	"log/slog"
 	"testing"
 
@@ -12,7 +13,6 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/20moonlight01/go_homeworks/internal/domain/trip"
-	"github.com/20moonlight01/go_homeworks/internal/infra/telemetry"
 	"github.com/20moonlight01/go_homeworks/internal/usecase/trip/create"
 )
 
@@ -33,8 +33,8 @@ func TestUsecase_Execute(t *testing.T) {
 
 		mockRepo := NewMocktripRepository(ctrl)
 		mockTx := NewMocktxManager(ctrl)
-		logger := telemetry.NewLogger(slog.LevelInfo)
-		metrics := telemetry.NewNoopMetrics()
+		logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
+		mockMetrics := NewMockmetrics(ctrl)
 
 		mockTx.EXPECT().Do(gomock.Any(), gomock.Any()).DoAndReturn(
 			func(ctx context.Context, fn func(context.Context) error) error {
@@ -42,8 +42,10 @@ func TestUsecase_Execute(t *testing.T) {
 			},
 		)
 		mockRepo.EXPECT().Save(gomock.Any(), gomock.Any()).Return(nil)
+		mockMetrics.EXPECT().IncTripsCreated(gomock.Any())
+		mockMetrics.EXPECT().IncTripsActive(gomock.Any())
 
-		uc := create.NewUsecase(mockRepo, mockTx, logger, metrics)
+		uc := create.NewUsecase(mockRepo, mockTx, logger, mockMetrics)
 		tripData, err := uc.Execute(context.Background(), validReq)
 
 		require.NoError(t, err)
@@ -59,10 +61,10 @@ func TestUsecase_Execute(t *testing.T) {
 
 		mockRepo := NewMocktripRepository(ctrl)
 		mockTx := NewMocktxManager(ctrl)
-		logger := telemetry.NewLogger(slog.LevelInfo)
-		metrics := telemetry.NewNoopMetrics()
+		logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
+		mockMetrics := NewMockmetrics(ctrl)
 
-		uc := create.NewUsecase(mockRepo, mockTx, logger, metrics)
+		uc := create.NewUsecase(mockRepo, mockTx, logger, mockMetrics)
 
 		invalidReq := validReq
 		invalidReq.Price = -1
@@ -81,8 +83,8 @@ func TestUsecase_Execute(t *testing.T) {
 
 		mockRepo := NewMocktripRepository(ctrl)
 		mockTx := NewMocktxManager(ctrl)
-		logger := telemetry.NewLogger(slog.LevelInfo)
-		metrics := telemetry.NewNoopMetrics()
+		logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
+		mockMetrics := NewMockmetrics(ctrl)
 
 		mockTx.EXPECT().Do(gomock.Any(), gomock.Any()).DoAndReturn(
 			func(ctx context.Context, fn func(context.Context) error) error {
@@ -91,7 +93,7 @@ func TestUsecase_Execute(t *testing.T) {
 		)
 		mockRepo.EXPECT().Save(gomock.Any(), gomock.Any()).Return(trip.ErrDriverBusy)
 
-		uc := create.NewUsecase(mockRepo, mockTx, logger, metrics)
+		uc := create.NewUsecase(mockRepo, mockTx, logger, mockMetrics)
 		_, err := uc.Execute(context.Background(), validReq)
 
 		require.Error(t, err)

@@ -7,17 +7,16 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/20moonlight01/go_homeworks/internal/domain/trip"
-	"github.com/20moonlight01/go_homeworks/internal/infra/telemetry"
 )
 
 type Usecase struct {
 	repo    tripRepository
 	txm     txManager
 	logger  *slog.Logger
-	metrics *telemetry.Metrics
+	metrics metrics
 }
 
-func NewUsecase(repo tripRepository, txm txManager, logger *slog.Logger, metrics *telemetry.Metrics) *Usecase {
+func NewUsecase(repo tripRepository, txm txManager, logger *slog.Logger, metrics metrics) *Usecase {
 	return &Usecase{
 		repo:    repo,
 		txm:     txm,
@@ -57,10 +56,8 @@ func (u *Usecase) Execute(ctx context.Context, req Request) (*trip.Trip, error) 
 		return nil, err
 	}
 
-	u.metrics.TripsCreated.Add(ctx, 1)
-
-	newActiveCount := telemetry.ActiveTripsCount.Add(1)
-	u.metrics.TripsActive.Record(ctx, newActiveCount)
+	u.metrics.IncTripsCreated(ctx)
+	u.metrics.IncTripsActive(ctx)
 
 	u.logger.InfoContext(ctx, "trip created", "trip_id", t.Id)
 

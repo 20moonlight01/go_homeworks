@@ -18,4 +18,9 @@ type (
 	txManager interface {
 		Do(ctx context.Context, fn func(ctx context.Context) error) error
 	}
+
+	metrics interface {
+		IncTripsCompleted(ctx context.Context)
+		DecTripsActive(ctx context.Context)
+	}
 )

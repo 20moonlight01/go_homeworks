@@ -2,6 +2,7 @@ package finish_test
 
 import (
 	"context"
+	"io"
 	"log/slog"
 	"testing"
 
@@ -11,7 +12,6 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/20moonlight01/go_homeworks/internal/domain/trip"
-	"github.com/20moonlight01/go_homeworks/internal/infra/telemetry"
 	"github.com/20moonlight01/go_homeworks/internal/usecase/trip/finish"
 )
 
@@ -24,8 +24,8 @@ func TestUsecase_Execute(t *testing.T) {
 
 		mockRepo := NewMocktripRepository(ctrl)
 		mockTx := NewMocktxManager(ctrl)
-		logger := telemetry.NewLogger(slog.LevelInfo)
-		metrics := telemetry.NewNoopMetrics()
+		logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
+		mockMetrics := NewMockmetrics(ctrl)
 
 		expectedTrip := &trip.Trip{Id: tripID, Status: trip.StatusCompleted}
 
@@ -35,8 +35,10 @@ func TestUsecase_Execute(t *testing.T) {
 			},
 		)
 		mockRepo.EXPECT().Finish(gomock.Any(), tripID).Return(expectedTrip, nil)
+		mockMetrics.EXPECT().IncTripsCompleted(gomock.Any())
+		mockMetrics.EXPECT().DecTripsActive(gomock.Any())
 
-		uc := finish.NewUsecase(mockRepo, mockTx, logger, metrics)
+		uc := finish.NewUsecase(mockRepo, mockTx, logger, mockMetrics)
 		result, err := uc.Execute(context.Background(), tripID)
 
 		require.NoError(t, err)
@@ -49,8 +51,8 @@ func TestUsecase_Execute(t *testing.T) {
 
 		mockRepo := NewMocktripRepository(ctrl)
 		mockTx := NewMocktxManager(ctrl)
-		logger := telemetry.NewLogger(slog.LevelInfo)
-		metrics := telemetry.NewNoopMetrics()
+		logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
+		mockMetrics := NewMockmetrics(ctrl)
 
 		mockTx.EXPECT().Do(gomock.Any(), gomock.Any()).DoAndReturn(
 			func(ctx context.Context, fn func(context.Context) error) error {
@@ -59,7 +61,7 @@ func TestUsecase_Execute(t *testing.T) {
 		)
 		mockRepo.EXPECT().Finish(gomock.Any(), tripID).Return(nil, trip.ErrTripNotFound)
 
-		uc := finish.NewUsecase(mockRepo, mockTx, logger, metrics)
+		uc := finish.NewUsecase(mockRepo, mockTx, logger, mockMetrics)
 		_, err := uc.Execute(context.Background(), tripID)
 
 		require.Error(t, err)
@@ -72,8 +74,8 @@ func TestUsecase_Execute(t *testing.T) {
 
 		mockRepo := NewMocktripRepository(ctrl)
 		mockTx := NewMocktxManager(ctrl)
-		logger := telemetry.NewLogger(slog.LevelInfo)
-		metrics := telemetry.NewNoopMetrics()
+		logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
+		mockMetrics := NewMockmetrics(ctrl)
 
 		mockTx.EXPECT().Do(gomock.Any(), gomock.Any()).DoAndReturn(
 			func(ctx context.Context, fn func(context.Context) error) error {
@@ -82,7 +84,7 @@ func TestUsecase_Execute(t *testing.T) {
 		)
 		mockRepo.EXPECT().Finish(gomock.Any(), tripID).Return(nil, trip.ErrTripCompleted)
 
-		uc := finish.NewUsecase(mockRepo, mockTx, logger, metrics)
+		uc := finish.NewUsecase(mockRepo, mockTx, logger, mockMetrics)
 		_, err := uc.Execute(context.Background(), tripID)
 
 		require.Error(t, err)
