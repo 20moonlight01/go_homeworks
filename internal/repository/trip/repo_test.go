@@ -30,6 +30,7 @@ func setupTestDB(t *testing.T) *pgxpool.Pool {
 	pool, err := pgxpool.New(context.Background(), dbURL)
 	require.NoError(t, err)
 
+	t.Cleanup(pool.Close)
 	return pool
 }
 
@@ -41,7 +42,6 @@ func setupRepo(pool *pgxpool.Pool) (*repo.Repository, transaction.TxManager) {
 
 func TestRepository_SaveAndGet(t *testing.T) {
 	pool := setupTestDB(t)
-	defer pool.Close()
 
 	r, txm := setupRepo(pool)
 	ctx := context.Background()
@@ -50,7 +50,8 @@ func TestRepository_SaveAndGet(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Cleanup(func() {
-		_, _ = pool.Exec(context.Background(), "DELETE FROM trips WHERE id = $1", tr.Id)
+		_, err := pool.Exec(context.Background(), "DELETE FROM trips WHERE id = $1", tr.Id)
+		require.NoError(t, err)
 	})
 
 	err = txm.Do(ctx, func(ctx context.Context) error {
@@ -67,7 +68,6 @@ func TestRepository_SaveAndGet(t *testing.T) {
 
 func TestRepository_Save_TransactionRollback(t *testing.T) {
 	pool := setupTestDB(t)
-	defer pool.Close()
 
 	r, txm := setupRepo(pool)
 	ctx := context.Background()
@@ -75,7 +75,8 @@ func TestRepository_Save_TransactionRollback(t *testing.T) {
 	tr, _ := trip.NewTrip(uuid.New(), uuid.New(), 55.0, 37.0, 56.0, 38.0, 100)
 
 	t.Cleanup(func() {
-		_, _ = pool.Exec(context.Background(), "DELETE FROM trips WHERE id = $1", tr.Id)
+		_, err := pool.Exec(context.Background(), "DELETE FROM trips WHERE id = $1", tr.Id)
+		require.NoError(t, err)
 	})
 
 	err := txm.Do(ctx, func(ctx context.Context) error {
@@ -90,11 +91,15 @@ func TestRepository_Save_TransactionRollback(t *testing.T) {
 	err = pool.QueryRow(ctx, "SELECT count(*) FROM trips WHERE id = $1", tr.Id).Scan(&count)
 	require.NoError(t, err)
 	assert.Equal(t, 0, count, "Транзакция должна была откатиться")
+
+	var historyCount int
+	err = pool.QueryRow(ctx, "SELECT count(*) FROM trip_status_history WHERE trip_id = $1", tr.Id).Scan(&historyCount)
+	require.NoError(t, err)
+	assert.Equal(t, 0, historyCount, "История тоже должна была откатиться")
 }
 
 func TestRepository_Save_DriverBusy(t *testing.T) {
 	pool := setupTestDB(t)
-	defer pool.Close()
 
 	r, txm := setupRepo(pool)
 	ctx := context.Background()
@@ -102,9 +107,11 @@ func TestRepository_Save_DriverBusy(t *testing.T) {
 	driverID := uuid.New()
 
 	tr1, _ := trip.NewTrip(uuid.New(), driverID, 55.0, 37.0, 56.0, 38.0, 100)
+	tr2, _ := trip.NewTrip(uuid.New(), driverID, 55.0, 37.0, 56.0, 38.0, 100)
 
 	t.Cleanup(func() {
-		_, _ = pool.Exec(context.Background(), "DELETE FROM trips WHERE id IN ($1, $2)", tr1.Id, tr1.Id)
+		_, err := pool.Exec(context.Background(), "DELETE FROM trips WHERE id IN ($1, $2)", tr1.Id, tr2.Id)
+		require.NoError(t, err)
 	})
 
 	err := txm.Do(ctx, func(ctx context.Context) error {
@@ -112,7 +119,6 @@ func TestRepository_Save_DriverBusy(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	tr2, _ := trip.NewTrip(uuid.New(), driverID, 55.0, 37.0, 56.0, 38.0, 100)
 	err = txm.Do(ctx, func(ctx context.Context) error {
 		return r.Save(ctx, tr2)
 	})
