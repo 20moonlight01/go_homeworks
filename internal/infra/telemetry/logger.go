@@ -2,7 +2,6 @@ package telemetry
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 
@@ -14,10 +13,8 @@ type traceHandler struct {
 }
 
 func NewLogger(level slog.Level) *slog.Logger {
-	fmt.Print("DEBUG")
 	h := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: level})
 
-	// return slog.New(h).With("service", "trip-service")
 	return slog.New(&traceHandler{h}).With("service", "trip-service")
 }
 

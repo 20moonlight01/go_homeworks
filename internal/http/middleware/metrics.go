@@ -45,18 +45,30 @@ func Metrics(next http.Handler) http.Handler {
 			attribute.String("http.route", route),
 		)
 		activeRequests.Add(r.Context(), 1, attrs)
-		defer activeRequests.Add(r.Context(), -1, attrs)
 
 		start := time.Now()
 		rec := &statusRecorder{ResponseWriter: w, status: 0}
-		next.ServeHTTP(rec, r)
 
-		requestDuration.Record(r.Context(), time.Since(start).Seconds(),
-			metric.WithAttributes(
-				attribute.String("http.request.method", r.Method),
-				attribute.String("http.route", route),
-				attribute.Int("http.response.status_code", rec.status),
-			),
-		)
+		defer func() {
+			activeRequests.Add(r.Context(), -1, attrs)
+
+			status := rec.status
+			if p := recover(); p != nil {
+				status = http.StatusInternalServerError
+				defer panic(p)
+			} else if status == 0 {
+				status = http.StatusOK
+			}
+
+			requestDuration.Record(r.Context(), time.Since(start).Seconds(),
+				metric.WithAttributes(
+					attribute.String("http.request.method", r.Method),
+					attribute.String("http.route", route),
+					attribute.Int("http.response.status_code", rec.status),
+				),
+			)
+		}()
+
+		next.ServeHTTP(rec, r)
 	})
 }

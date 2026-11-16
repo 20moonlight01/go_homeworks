@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -18,30 +19,43 @@ func Tracing(next http.Handler) http.Handler {
 		ctx, span := tracer.Start(r.Context(), "HTTP Request", trace.WithSpanKind(trace.SpanKindServer))
 		defer span.End()
 
+		setSpanInHolder(ctx, span)
+
 		rec := &statusRecorder{ResponseWriter: w, status: 0}
 		r = r.WithContext(ctx)
 
-		next.ServeHTTP(rec, r)
-
-		route := chi.RouteContext(ctx).RoutePattern()
-		if route == "" {
-			route = r.URL.Path
-		}
-
-		span.SetName(r.Method + " " + route)
-		span.SetAttributes(
-			semconv.HTTPRequestMethodKey.String(r.Method),
-			semconv.HTTPRoute(route),
-			semconv.HTTPResponseStatusCode(rec.status),
-		)
-
-		if rec.status >= 400 {
-			errorType := http.StatusText(rec.status)
-			if errorType == "" {
-				errorType = strconv.Itoa(rec.status)
+		defer func() {
+			status := rec.status
+			if p := recover(); p != nil {
+				status = http.StatusInternalServerError
+				span.RecordError(fmt.Errorf("panic: %v", p))
+				defer panic(p)
+			} else if status == 0 {
+				status = http.StatusOK
 			}
-			span.SetAttributes(attribute.String("error.type", errorType))
-			span.SetStatus(codes.Error, errorType)
-		}
+
+			route := chi.RouteContext(ctx).RoutePattern()
+			if route == "" {
+				route = r.URL.Path
+			}
+
+			span.SetName(r.Method + " " + route)
+			span.SetAttributes(
+				semconv.HTTPRequestMethodKey.String(r.Method),
+				semconv.HTTPRoute(route),
+				semconv.HTTPResponseStatusCode(rec.status),
+			)
+
+			if rec.status >= 400 {
+				errorType := http.StatusText(rec.status)
+				if errorType == "" {
+					errorType = strconv.Itoa(rec.status)
+				}
+				span.SetAttributes(attribute.String("error.type", errorType))
+				span.SetStatus(codes.Error, errorType)
+			}
+		}()
+
+		next.ServeHTTP(rec, r)
 	})
 }
