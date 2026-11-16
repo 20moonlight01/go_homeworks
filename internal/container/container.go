@@ -60,6 +60,14 @@ func New(ctx context.Context, cfg *config.Config) (*Container, error) {
 		return nil, fmt.Errorf("connection to db failed: %w", err)
 	}
 
+	var activeCount int64
+	if err := pool.QueryRow(ctx, "SELECT count(*) FROM trips WHERE status = 'active'").Scan(&activeCount); err != nil {
+		pool.Close()
+		_ = shutdownTelemetry(ctx)
+		return nil, fmt.Errorf("count active trips: %w", err)
+	}
+	metrics.SetTripsActive(ctx, activeCount)
+
 	txManager := transaction.NewManager(pool)
 
 	tripRepo := trip.NewRepository(pool, cfg.DBQueryTimeout)
