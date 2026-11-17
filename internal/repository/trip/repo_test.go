@@ -72,20 +72,27 @@ func TestRepository_Save_TransactionRollback(t *testing.T) {
 	r, txm := setupRepo(pool)
 	ctx := context.Background()
 
-	tr, _ := trip.NewTrip(uuid.New(), uuid.New(), 55.0, 37.0, 56.0, 38.0, 100)
+	tr, err := trip.NewTrip(uuid.New(), uuid.New(), 55.0, 37.0, 56.0, 38.0, 100)
+	require.NoError(t, err)
 
 	t.Cleanup(func() {
 		_, err := pool.Exec(context.Background(), "DELETE FROM trips WHERE id = $1", tr.Id)
 		require.NoError(t, err)
 	})
 
-	err := txm.Do(ctx, func(ctx context.Context) error {
-		if err := r.Save(ctx, tr); err != nil {
-			return err
-		}
-		return errors.New("искусственная ошибка для проверки отката")
+	errRollback := errors.New("искусственная ошибка для проверки отката")
+
+	err = txm.Do(ctx, func(txCtx context.Context) error {
+		require.NoError(t, r.Save(txCtx, tr))
+
+		saved, err := r.GetByID(txCtx, tr.Id)
+		require.NoError(t, err)
+		require.Equal(t, tr.Id, saved.Id)
+
+		return errRollback
 	})
-	require.Error(t, err)
+
+	require.ErrorIs(t, err, errRollback)
 
 	var count int
 	err = pool.QueryRow(ctx, "SELECT count(*) FROM trips WHERE id = $1", tr.Id).Scan(&count)
