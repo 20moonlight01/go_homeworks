@@ -19,6 +19,5 @@ type (
 
 	metrics interface {
 		IncTripsCreated(ctx context.Context)
-		IncTripsActive(ctx context.Context)
 	}
 )

@@ -44,12 +44,6 @@ func New(ctx context.Context, baseCtx context.Context, cfg *config.Config) (*Con
 		return nil, fmt.Errorf("init telemetry: %w", err)
 	}
 
-	metrics, err := telemetry.NewMetrics()
-	if err != nil {
-		_ = shutdownTelemetry(ctx)
-		return nil, fmt.Errorf("init metrics: %w", err)
-	}
-
 	var lvl slog.Level
 	if err := lvl.UnmarshalText([]byte(cfg.LogLevel)); err != nil {
 		lvl = slog.LevelInfo
@@ -62,17 +56,16 @@ func New(ctx context.Context, baseCtx context.Context, cfg *config.Config) (*Con
 		return nil, fmt.Errorf("connection to db failed: %w", err)
 	}
 
-	var activeCount int64
-	if err := pool.QueryRow(ctx, "SELECT count(*) FROM trips WHERE status = 'active'").Scan(&activeCount); err != nil {
-		pool.Close()
-		_ = shutdownTelemetry(ctx)
-		return nil, fmt.Errorf("count active trips: %w", err)
-	}
-	metrics.SetTripsActive(ctx, activeCount)
-
 	txManager := transaction.NewManager(pool)
 
 	tripRepo := trip.NewRepository(pool, cfg.DBQueryTimeout)
+
+	metrics, err := telemetry.NewMetrics(tripRepo.CountActive)
+	if err != nil {
+		_ = shutdownTelemetry(ctx)
+		pool.Close()
+		return nil, fmt.Errorf("init metrics: %w", err)
+	}
 
 	createUC := create.NewUsecase(tripRepo, txManager, logger, metrics)
 	getUC := get.NewUsecase(tripRepo)
@@ -131,11 +124,11 @@ func New(ctx context.Context, baseCtx context.Context, cfg *config.Config) (*Con
 }
 
 func (c *Container) Close() {
-	c.Pool.Close()
 	if c.shutdownTelemetry != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		_ = c.shutdownTelemetry(ctx)
 	}
+	c.Pool.Close()
 	c.Logger.Info("service stopped")
 }

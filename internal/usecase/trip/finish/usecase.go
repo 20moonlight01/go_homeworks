@@ -48,7 +48,6 @@ func (u *Usecase) Execute(ctx context.Context, id uuid.UUID) (*trip.Trip, error)
 	}
 
 	u.metrics.IncTripsCompleted(ctx)
-	u.metrics.DecTripsActive(ctx)
 
 	u.logger.InfoContext(ctx, "trip finished", "trip_id", result.Id)
 

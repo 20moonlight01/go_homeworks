@@ -57,7 +57,6 @@ func (u *Usecase) Execute(ctx context.Context, req Request) (*trip.Trip, error) 
 	}
 
 	u.metrics.IncTripsCreated(ctx)
-	u.metrics.IncTripsActive(ctx)
 
 	u.logger.InfoContext(ctx, "trip created", "trip_id", t.Id)
 

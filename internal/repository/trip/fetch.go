@@ -67,3 +67,26 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Trip, e
 
 	return &trip, nil
 }
+
+func (r *Repository) CountActive(ctx context.Context) (int64, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.queryTimeout)
+	defer cancel()
+
+	exec := r.exec(ctx)
+
+	sqlText, args, err := psqlBuilder.
+		Select("count(*)").
+		From("trips").
+		Where(sq.Eq{"status": string(domain.StatusActive)}).
+		ToSql()
+	if err != nil {
+		return 0, fmt.Errorf("build count query: %w", err)
+	}
+
+	var count int64
+	if err := exec.QueryRow(ctx, sqlText, args...).Scan(&count); err != nil {
+		return 0, fmt.Errorf("count active trips: %w", err)
+	}
+
+	return count, nil
+}
