@@ -38,7 +38,7 @@ type Container struct {
 	shutdownTelemetry func(context.Context) error
 }
 
-func New(ctx context.Context, cfg *config.Config) (*Container, error) {
+func New(ctx context.Context, baseCtx context.Context, cfg *config.Config) (*Container, error) {
 	shutdownTelemetry, err := telemetry.Init(ctx, cfg.OTELServiceName)
 	if err != nil {
 		return nil, fmt.Errorf("init telemetry: %w", err)
@@ -46,6 +46,7 @@ func New(ctx context.Context, cfg *config.Config) (*Container, error) {
 
 	metrics, err := telemetry.NewMetrics()
 	if err != nil {
+		_ = shutdownTelemetry(ctx)
 		return nil, fmt.Errorf("init metrics: %w", err)
 	}
 
@@ -113,13 +114,11 @@ func New(ctx context.Context, cfg *config.Config) (*Container, error) {
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
 		Handler:           r,
+		BaseContext:       func(_ net.Listener) context.Context { return baseCtx },
 		ReadTimeout:       cfg.HTTPReadTimeout,
 		ReadHeaderTimeout: cfg.HTTPReadHeaderTimeout,
 		WriteTimeout:      cfg.HTTPWriteTimeout,
 		IdleTimeout:       cfg.HTTPIdleTimeout,
-		BaseContext: func(net.Listener) context.Context {
-			return ctx
-		},
 	}
 
 	return &Container{
@@ -138,4 +137,5 @@ func (c *Container) Close() {
 		defer cancel()
 		_ = c.shutdownTelemetry(ctx)
 	}
+	c.Logger.Info("service stopped")
 }

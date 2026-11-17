@@ -29,7 +29,10 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	c, err := container.New(ctx, cfg)
+	reqCtx, cancelRequests := context.WithCancel(context.Background())
+	defer cancelRequests()
+
+	c, err := container.New(ctx, reqCtx, cfg)
 	if err != nil {
 		log.Printf("container init failed: %v", err)
 		return err
@@ -57,9 +60,9 @@ func run() error {
 
 	if err := c.Server.Shutdown(shutdownCtx); err != nil {
 		c.Logger.Error("shutdown error", "error", err)
+		cancelRequests()
 		_ = c.Server.Close()
 	}
 
-	c.Logger.Info("service stopped")
 	return nil
 }
