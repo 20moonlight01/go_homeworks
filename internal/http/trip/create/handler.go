@@ -2,6 +2,8 @@ package create
 
 import (
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 
 	openapi "github.com/oapi-codegen/runtime/types"
@@ -38,6 +40,11 @@ func (h *Handler) CreateTrip(w http.ResponseWriter, r *http.Request, _ api.Creat
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&raw); err != nil {
 		domainerror.Write(w, r, &trip.ValidationError{Field: "body", Message: "invalid JSON or unknown fields"})
+		return
+	}
+
+	if err := dec.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		domainerror.Write(w, r, &trip.ValidationError{Field: "body", Message: "unexpected trailing data"})
 		return
 	}
 
