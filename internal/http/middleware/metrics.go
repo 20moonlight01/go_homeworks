@@ -28,7 +28,7 @@ var (
 
 func Metrics(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		route := "unknown"
+		route := UnknownRoute
 		if rctx := chi.RouteContext(r.Context()); rctx != nil && rctx.Routes != nil {
 			tmpCtx := chi.NewRouteContext()
 			if rctx.Routes.Match(tmpCtx, r.Method, r.URL.Path) {
@@ -37,7 +37,7 @@ func Metrics(next http.Handler) http.Handler {
 		}
 		route = strings.TrimSuffix(route, "/*")
 		if route == "" {
-			route = "unknown"
+			route = UnknownRoute
 		}
 
 		attrs := metric.WithAttributes(
@@ -64,7 +64,7 @@ func Metrics(next http.Handler) http.Handler {
 				metric.WithAttributes(
 					attribute.String("http.request.method", r.Method),
 					attribute.String("http.route", route),
-					attribute.Int("http.response.status_code", rec.status),
+					attribute.Int("http.response.status_code", status),
 				),
 			)
 		}()

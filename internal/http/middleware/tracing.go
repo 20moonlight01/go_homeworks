@@ -9,14 +9,21 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
+const UnknownRoute = "unknown"
+
 func Tracing(next http.Handler) http.Handler {
 	tracer := otel.Tracer("tripgo-http")
+	propagator := otel.GetTextMapPropagator()
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx, span := tracer.Start(r.Context(), "HTTP Request", trace.WithSpanKind(trace.SpanKindServer))
+		ctx := propagator.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+
+		ctx, span := tracer.Start(ctx, "HTTP Request", trace.WithSpanKind(trace.SpanKindServer))
 		defer span.End()
 
 		setSpanInHolder(ctx, span)
@@ -36,20 +43,20 @@ func Tracing(next http.Handler) http.Handler {
 
 			route := chi.RouteContext(ctx).RoutePattern()
 			if route == "" {
-				route = r.URL.Path
+				route = UnknownRoute
 			}
 
 			span.SetName(r.Method + " " + route)
 			span.SetAttributes(
 				semconv.HTTPRequestMethodKey.String(r.Method),
 				semconv.HTTPRoute(route),
-				semconv.HTTPResponseStatusCode(rec.status),
+				semconv.HTTPResponseStatusCode(status),
 			)
 
-			if rec.status >= 400 {
-				errorType := http.StatusText(rec.status)
+			if status >= 400 {
+				errorType := http.StatusText(status)
 				if errorType == "" {
-					errorType = strconv.Itoa(rec.status)
+					errorType = strconv.Itoa(status)
 				}
 				span.SetAttributes(attribute.String("error.type", errorType))
 				span.SetStatus(codes.Error, errorType)

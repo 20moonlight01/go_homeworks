@@ -5,8 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/20moonlight01/go_homeworks/internal/http/ctxlog"
 	"github.com/go-chi/chi/v5"
+
+	"github.com/20moonlight01/go_homeworks/internal/http/ctxlog"
 )
 
 func Logging(logger *slog.Logger) func(http.Handler) http.Handler {
@@ -29,11 +30,11 @@ func Logging(logger *slog.Logger) func(http.Handler) http.Handler {
 
 				route := chi.RouteContext(r.Context()).RoutePattern()
 				if route == "" {
-					route = "unknown"
+					route = UnknownRoute
 				}
 
 				logFunc := logger.InfoContext
-				if rec.status >= 500 {
+				if status >= 500 {
 					logFunc = logger.ErrorContext
 				}
 

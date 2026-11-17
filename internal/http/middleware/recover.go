@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	"github.com/20moonlight01/go_homeworks/internal/http/domainerror"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/20moonlight01/go_homeworks/internal/http/domainerror"
 )
 
 func Recover(logger *slog.Logger) func(http.Handler) http.Handler {
@@ -16,8 +17,14 @@ func Recover(logger *slog.Logger) func(http.Handler) http.Handler {
 			ctx, holder := contextWithSpanHolder(r.Context())
 			r = r.WithContext(ctx)
 
+			bw := newBufferedResponseWriter()
+
 			defer func() {
 				if p := recover(); p != nil {
+					if p == http.ErrAbortHandler {
+						panic(p)
+					}
+
 					logCtx := r.Context()
 					if holder.span != nil {
 						logCtx = trace.ContextWithSpan(logCtx, holder.span)
@@ -30,7 +37,9 @@ func Recover(logger *slog.Logger) func(http.Handler) http.Handler {
 					domainerror.Write(w, r.WithContext(logCtx), fmt.Errorf("panic: %v", p))
 				}
 			}()
-			next.ServeHTTP(w, r)
+
+			next.ServeHTTP(bw, r)
+			bw.flushTo(w)
 		})
 	}
 }
