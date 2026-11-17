@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/20moonlight01/go_homeworks/internal/http/ctxlog"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -13,6 +14,9 @@ func Logging(logger *slog.Logger) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
 			rec := &statusRecorder{ResponseWriter: w, status: 0}
+
+			entry := &ctxlog.Entry{}
+			r = r.WithContext(ctxlog.WithEntry(r.Context(), entry))
 
 			defer func() {
 				status := rec.status
@@ -25,7 +29,7 @@ func Logging(logger *slog.Logger) func(http.Handler) http.Handler {
 
 				route := chi.RouteContext(r.Context()).RoutePattern()
 				if route == "" {
-					route = r.URL.Path
+					route = "unknown"
 				}
 
 				logFunc := logger.InfoContext
@@ -33,12 +37,17 @@ func Logging(logger *slog.Logger) func(http.Handler) http.Handler {
 					logFunc = logger.ErrorContext
 				}
 
-				logFunc(r.Context(), "request handled",
+				attrs := []any{
 					"method", r.Method,
 					"route", route,
-					"status", rec.status,
+					"status", status,
 					"duration_ms", time.Since(start).Milliseconds(),
-				)
+				}
+				if entry.Err != nil {
+					attrs = append(attrs, "error", entry.Err.Error())
+				}
+
+				logFunc(r.Context(), "request handled", attrs...)
 			}()
 
 			next.ServeHTTP(rec, r)

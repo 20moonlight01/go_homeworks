@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"time"
 
@@ -116,6 +117,9 @@ func New(ctx context.Context, cfg *config.Config) (*Container, error) {
 		ReadHeaderTimeout: cfg.HTTPReadHeaderTimeout,
 		WriteTimeout:      cfg.HTTPWriteTimeout,
 		IdleTimeout:       cfg.HTTPIdleTimeout,
+		BaseContext: func(net.Listener) context.Context {
+			return ctx
+		},
 	}
 
 	return &Container{

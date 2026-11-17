@@ -24,8 +24,7 @@ func main() {
 
 	c, err := container.New(ctx, cfg)
 	if err != nil {
-		log.Printf("container init failed: %v", err)
-		return
+		log.Fatalf("container init failed: %v", err)
 	}
 	defer c.Close()
 
@@ -45,6 +44,7 @@ func main() {
 
 	if err := c.Server.Shutdown(shutdownCtx); err != nil {
 		c.Logger.Error("shutdown error", "error", err)
+		_ = c.Server.Close()
 	}
 	c.Logger.Info("service stopped")
 }
