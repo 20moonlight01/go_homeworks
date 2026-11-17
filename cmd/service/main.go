@@ -14,9 +14,16 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("config load failed: %v", err)
+		log.Printf("config load failed: %v", err)
+		return err
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -24,20 +31,26 @@ func main() {
 
 	c, err := container.New(ctx, cfg)
 	if err != nil {
-		log.Fatalf("container init failed: %v", err)
+		log.Printf("container init failed: %v", err)
+		return err
 	}
 	defer c.Close()
 
+	errCh := make(chan error, 1)
 	go func() {
 		c.Logger.Info("starting server", "addr", cfg.HTTPAddr)
 		if err := c.Server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			c.Logger.Error("server error", "error", err)
-			os.Exit(1)
+			errCh <- err
 		}
 	}()
 
-	<-ctx.Done()
-	c.Logger.Info("waiting for active requests on termination signal")
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+		c.Logger.Info("waiting for active requests on termination signal")
+	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
@@ -46,5 +59,7 @@ func main() {
 		c.Logger.Error("shutdown error", "error", err)
 		_ = c.Server.Close()
 	}
+
 	c.Logger.Info("service stopped")
+	return nil
 }
