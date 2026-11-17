@@ -38,7 +38,7 @@ type Container struct {
 	shutdownTelemetry func(context.Context) error
 }
 
-func New(ctx context.Context, baseCtx context.Context, cfg *config.Config) (*Container, error) {
+func New(ctx, baseCtx context.Context, cfg *config.Config) (*Container, error) {
 	shutdownTelemetry, err := telemetry.Init(ctx, cfg.OTELServiceName)
 	if err != nil {
 		return nil, fmt.Errorf("init telemetry: %w", err)

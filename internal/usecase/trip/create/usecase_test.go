@@ -43,7 +43,6 @@ func TestUsecase_Execute(t *testing.T) {
 		)
 		mockRepo.EXPECT().Save(gomock.Any(), gomock.Any()).Return(nil)
 		mockMetrics.EXPECT().IncTripsCreated(gomock.Any())
-		mockMetrics.EXPECT().IncTripsActive(gomock.Any())
 
 		uc := create.NewUsecase(mockRepo, mockTx, logger, mockMetrics)
 		tripData, err := uc.Execute(context.Background(), validReq)

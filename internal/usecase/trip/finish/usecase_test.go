@@ -27,22 +27,24 @@ func TestUsecase_Execute(t *testing.T) {
 		logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
 		mockMetrics := NewMockmetrics(ctrl)
 
-		expectedTrip := &trip.Trip{Id: tripID, Status: trip.StatusCompleted}
+		activeTrip := &trip.Trip{Id: tripID, Status: trip.StatusActive}
 
 		mockTx.EXPECT().Do(gomock.Any(), gomock.Any()).DoAndReturn(
 			func(ctx context.Context, fn func(context.Context) error) error {
 				return fn(ctx)
 			},
 		)
-		mockRepo.EXPECT().Finish(gomock.Any(), tripID).Return(expectedTrip, nil)
+		mockRepo.EXPECT().GetByIDForUpdate(gomock.Any(), tripID).Return(activeTrip, nil)
+		mockRepo.EXPECT().SaveFinished(gomock.Any(), activeTrip, trip.StatusActive).Return(nil)
 		mockMetrics.EXPECT().IncTripsCompleted(gomock.Any())
-		mockMetrics.EXPECT().DecTripsActive(gomock.Any())
 
 		uc := finish.NewUsecase(mockRepo, mockTx, logger, mockMetrics)
 		result, err := uc.Execute(context.Background(), tripID)
 
 		require.NoError(t, err)
-		assert.Equal(t, expectedTrip, result)
+		assert.Equal(t, tripID, result.Id)
+		assert.Equal(t, trip.StatusCompleted, result.Status)
+		assert.NotNil(t, result.FinishedAt)
 	})
 
 	t.Run("trip not found", func(t *testing.T) {
@@ -59,7 +61,7 @@ func TestUsecase_Execute(t *testing.T) {
 				return fn(ctx)
 			},
 		)
-		mockRepo.EXPECT().Finish(gomock.Any(), tripID).Return(nil, trip.ErrTripNotFound)
+		mockRepo.EXPECT().GetByIDForUpdate(gomock.Any(), tripID).Return(nil, trip.ErrTripNotFound)
 
 		uc := finish.NewUsecase(mockRepo, mockTx, logger, mockMetrics)
 		_, err := uc.Execute(context.Background(), tripID)
@@ -77,12 +79,14 @@ func TestUsecase_Execute(t *testing.T) {
 		logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
 		mockMetrics := NewMockmetrics(ctrl)
 
+		completedTrip := &trip.Trip{Id: tripID, Status: trip.StatusCompleted}
+
 		mockTx.EXPECT().Do(gomock.Any(), gomock.Any()).DoAndReturn(
 			func(ctx context.Context, fn func(context.Context) error) error {
 				return fn(ctx)
 			},
 		)
-		mockRepo.EXPECT().Finish(gomock.Any(), tripID).Return(nil, trip.ErrTripCompleted)
+		mockRepo.EXPECT().GetByIDForUpdate(gomock.Any(), tripID).Return(completedTrip, nil)
 
 		uc := finish.NewUsecase(mockRepo, mockTx, logger, mockMetrics)
 		_, err := uc.Execute(context.Background(), tripID)

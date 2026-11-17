@@ -117,18 +117,6 @@ func (m *Mockmetrics) EXPECT() *MockmetricsMockRecorder {
 	return m.recorder
 }
 
-// IncTripsActive mocks base method.
-func (m *Mockmetrics) IncTripsActive(ctx context.Context) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "IncTripsActive", ctx)
-}
-
-// IncTripsActive indicates an expected call of IncTripsActive.
-func (mr *MockmetricsMockRecorder) IncTripsActive(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IncTripsActive", reflect.TypeOf((*Mockmetrics)(nil).IncTripsActive), ctx)
-}
-
 // IncTripsCreated mocks base method.
 func (m *Mockmetrics) IncTripsCreated(ctx context.Context) {
 	m.ctrl.T.Helper()

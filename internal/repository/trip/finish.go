@@ -2,16 +2,14 @@ package trip
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/google/uuid"
 
 	domain "github.com/20moonlight01/go_homeworks/internal/domain/trip"
 )
 
-func (r *Repository) Finish(ctx context.Context, id uuid.UUID) (*domain.Trip, error) {
+func (r *Repository) SaveFinished(ctx context.Context, t *domain.Trip, fromStatus domain.Status) error {
 	ctx, cancel := context.WithTimeout(ctx, r.queryTimeout)
 	defer cancel()
 
@@ -19,32 +17,21 @@ func (r *Repository) Finish(ctx context.Context, id uuid.UUID) (*domain.Trip, er
 
 	sqlText, args, err := psqlBuilder.
 		Update("trips").
-		Set("status", string(domain.StatusCompleted)).
-		Set("finished_at", sq.Expr("now()")).
+		Set("status", string(t.Status)).
+		Set("finished_at", t.FinishedAt).
 		Set("updated_at", sq.Expr("now()")).
-		Where(sq.Eq{"id": id, "status": string(domain.StatusActive)}).
+		Where(sq.Eq{"id": t.Id}).
 		ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("build update query: %w", err)
+		return fmt.Errorf("build update query: %w", err)
 	}
 
 	tag, err := exec.Exec(ctx, sqlText, args...)
 	if err != nil {
-		return nil, fmt.Errorf("update trip: %w", err)
+		return fmt.Errorf("update trip: %w", err)
 	}
-
 	if tag.RowsAffected() == 0 {
-		_, err = r.GetByID(ctx, id)
-
-		if errors.Is(err, domain.ErrTripNotFound) {
-			return nil, domain.ErrTripNotFound
-		}
-
-		if err != nil {
-			return nil, err
-		}
-
-		return nil, domain.ErrTripCompleted
+		return domain.ErrTripNotFound
 	}
 
 	historySqlText, hArgs, err := psqlBuilder.
@@ -53,16 +40,16 @@ func (r *Repository) Finish(ctx context.Context, id uuid.UUID) (*domain.Trip, er
 			"trip_id", "from_status", "to_status", "reason",
 		).
 		Values(
-			id, string(domain.StatusActive), string(domain.StatusCompleted), "trip finished",
+			t.Id, string(fromStatus), string(t.Status), "trip finished",
 		).
 		ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("build insert query: %w", err)
+		return fmt.Errorf("build insert query: %w", err)
 	}
 
 	if _, err := exec.Exec(ctx, historySqlText, hArgs...); err != nil {
-		return nil, fmt.Errorf("insert trip status history: %w", err)
+		return fmt.Errorf("insert trip status history: %w", err)
 	}
 
-	return r.GetByID(ctx, id)
+	return nil
 }

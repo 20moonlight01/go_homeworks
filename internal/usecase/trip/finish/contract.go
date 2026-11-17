@@ -7,12 +7,13 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/20moonlight01/go_homeworks/internal/domain/trip"
+	domain "github.com/20moonlight01/go_homeworks/internal/domain/trip"
 )
 
 type (
 	tripRepository interface {
-		Finish(ctx context.Context, id uuid.UUID) (*trip.Trip, error)
+		GetByIDForUpdate(ctx context.Context, id uuid.UUID) (*domain.Trip, error)
+		SaveFinished(ctx context.Context, t *domain.Trip, fromStatus domain.Status) error
 	}
 
 	txManager interface {

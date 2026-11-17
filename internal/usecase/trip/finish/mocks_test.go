@@ -42,19 +42,33 @@ func (m *MocktripRepository) EXPECT() *MocktripRepositoryMockRecorder {
 	return m.recorder
 }
 
-// Finish mocks base method.
-func (m *MocktripRepository) Finish(ctx context.Context, id uuid.UUID) (*trip.Trip, error) {
+// GetByIDForUpdate mocks base method.
+func (m *MocktripRepository) GetByIDForUpdate(ctx context.Context, id uuid.UUID) (*trip.Trip, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Finish", ctx, id)
+	ret := m.ctrl.Call(m, "GetByIDForUpdate", ctx, id)
 	ret0, _ := ret[0].(*trip.Trip)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Finish indicates an expected call of Finish.
-func (mr *MocktripRepositoryMockRecorder) Finish(ctx, id any) *gomock.Call {
+// GetByIDForUpdate indicates an expected call of GetByIDForUpdate.
+func (mr *MocktripRepositoryMockRecorder) GetByIDForUpdate(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Finish", reflect.TypeOf((*MocktripRepository)(nil).Finish), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIDForUpdate", reflect.TypeOf((*MocktripRepository)(nil).GetByIDForUpdate), ctx, id)
+}
+
+// SaveFinished mocks base method.
+func (m *MocktripRepository) SaveFinished(ctx context.Context, t *trip.Trip, fromStatus trip.Status) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveFinished", ctx, t, fromStatus)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SaveFinished indicates an expected call of SaveFinished.
+func (mr *MocktripRepositoryMockRecorder) SaveFinished(ctx, t, fromStatus any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveFinished", reflect.TypeOf((*MocktripRepository)(nil).SaveFinished), ctx, t, fromStatus)
 }
 
 // MocktxManager is a mock of txManager interface.
@@ -117,18 +131,6 @@ func NewMockmetrics(ctrl *gomock.Controller) *Mockmetrics {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *Mockmetrics) EXPECT() *MockmetricsMockRecorder {
 	return m.recorder
-}
-
-// DecTripsActive mocks base method.
-func (m *Mockmetrics) DecTripsActive(ctx context.Context) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "DecTripsActive", ctx)
-}
-
-// DecTripsActive indicates an expected call of DecTripsActive.
-func (mr *MockmetricsMockRecorder) DecTripsActive(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DecTripsActive", reflect.TypeOf((*Mockmetrics)(nil).DecTripsActive), ctx)
 }
 
 // IncTripsCompleted mocks base method.

@@ -3,6 +3,7 @@ package finish
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -39,9 +40,23 @@ func (u *Usecase) Execute(ctx context.Context, id uuid.UUID) (*trip.Trip, error)
 	var result *trip.Trip
 
 	err := u.txm.Do(ctx, func(ctx context.Context) error {
-		var repoErr error
-		result, repoErr = u.repo.Finish(ctx, id)
-		return repoErr
+		t, err := u.repo.GetByIDForUpdate(ctx, id)
+		if err != nil {
+			return err
+		}
+
+		prevStatus := t.Status
+
+		if err := t.Finish(time.Now().UTC()); err != nil {
+			return err
+		}
+
+		if err := u.repo.SaveFinished(ctx, t, prevStatus); err != nil {
+			return err
+		}
+
+		result = t
+		return nil
 	})
 	if err != nil {
 		return nil, err
