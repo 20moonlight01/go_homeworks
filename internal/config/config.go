@@ -25,12 +25,15 @@ type Config struct {
 	DBMaxConnLifetime time.Duration
 	DBConnectTimeout  time.Duration
 	DBQueryTimeout    time.Duration
+
+	OTELServiceName string
 }
 
 func Load() (*Config, error) {
 	cfg := &Config{
-		HTTPAddr:    os.Getenv("HTTP_ADDR"),
-		DatabaseURL: os.Getenv("DATABASE_URL"),
+		HTTPAddr:        os.Getenv("HTTP_ADDR"),
+		DatabaseURL:     os.Getenv("DATABASE_URL"),
+		OTELServiceName: os.Getenv("OTEL_SERVICE_NAME"),
 	}
 
 	if cfg.HTTPAddr == "" {
@@ -38,6 +41,9 @@ func Load() (*Config, error) {
 	}
 	if cfg.DatabaseURL == "" {
 		return nil, errors.New("DATABASE_URL is required")
+	}
+	if cfg.OTELServiceName == "" {
+		return nil, errors.New("OTEL_SERVICE_NAME is required")
 	}
 
 	cfg.LogLevel = "info"

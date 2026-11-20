@@ -8,10 +8,10 @@ ifneq (,$(wildcard ./.env.local))
     export
 endif
 
-.PHONY: run migrate migrate-down migrate-status generate test
+.PHONY: run migrate migrate-down migrate-status generate test test-integration lint
 
 run:
-	go run ./cmd/trip-service
+	go run ./cmd/service
 
 migrate:
 	go tool goose -dir ./migrations postgres $(DATABASE_URL) up
@@ -30,4 +30,10 @@ generate:
 		contracts/openapi/trip-service.openapi.yaml
 
 test:
-	go test -race ./...
+	go test -race -cover ./...
+
+test-integration:
+	go test -tags=integration -v ./internal/repository/...
+
+lint:
+	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest run
