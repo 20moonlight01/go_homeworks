@@ -8,14 +8,18 @@ import (
 	httpCreate "github.com/20moonlight01/go_homeworks/internal/http/trip/create"
 	httpFinish "github.com/20moonlight01/go_homeworks/internal/http/trip/finish"
 	httpGet "github.com/20moonlight01/go_homeworks/internal/http/trip/get"
+	httpCreatePosition "github.com/20moonlight01/go_homeworks/internal/http/trip/position/create"
+	httpListPosition "github.com/20moonlight01/go_homeworks/internal/http/trip/position/list"
 )
 
 type apiAdapter struct {
 	api.Unimplemented
-	create  *httpCreate.Handler
-	get     *httpGet.Handler
-	finish  *httpFinish.Handler
-	service *httpService.Handler
+	create        *httpCreate.Handler
+	get           *httpGet.Handler
+	finish        *httpFinish.Handler
+	savePosition  *httpCreatePosition.Handler
+	listPositions *httpListPosition.Handler
+	service       *httpService.Handler
 }
 
 func (a *apiAdapter) CreateTrip(w http.ResponseWriter, r *http.Request, params api.CreateTripParams) {
@@ -28,6 +32,14 @@ func (a *apiAdapter) GetTrip(w http.ResponseWriter, r *http.Request, tripId api.
 
 func (a *apiAdapter) FinishTrip(w http.ResponseWriter, r *http.Request, tripId api.TripId) {
 	a.finish.FinishTrip(w, r, tripId)
+}
+
+func (a *apiAdapter) CreateTripPosition(w http.ResponseWriter, r *http.Request, tripId api.TripId) {
+	a.savePosition.CreateTripPosition(w, r, tripId)
+}
+
+func (a *apiAdapter) ListTripPositions(w http.ResponseWriter, r *http.Request, tripId api.TripId) {
+	a.listPositions.ListTripPositions(w, r, tripId)
 }
 
 func (a *apiAdapter) Health(w http.ResponseWriter, r *http.Request) {

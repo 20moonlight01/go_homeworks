@@ -27,6 +27,13 @@ type Config struct {
 	DBQueryTimeout    time.Duration
 
 	OTELServiceName string
+
+	PositionCheckInterval time.Duration
+	PositionStaleAfter    time.Duration
+	PositionWorkers       int32
+	PositionQueueSize     int32
+	PushHTTPURL           string
+	PushRequestTimeout    time.Duration
 }
 
 func Load() (*Config, error) {
@@ -34,6 +41,7 @@ func Load() (*Config, error) {
 		HTTPAddr:        os.Getenv("HTTP_ADDR"),
 		DatabaseURL:     os.Getenv("DATABASE_URL"),
 		OTELServiceName: os.Getenv("OTEL_SERVICE_NAME"),
+		PushHTTPURL:     os.Getenv("PUSH_HTTP_URL"),
 	}
 
 	if cfg.HTTPAddr == "" {
@@ -44,6 +52,9 @@ func Load() (*Config, error) {
 	}
 	if cfg.OTELServiceName == "" {
 		return nil, errors.New("OTEL_SERVICE_NAME is required")
+	}
+	if cfg.PushHTTPURL == "" {
+		return nil, errors.New("PUSH_HTTP_URL is required")
 	}
 
 	cfg.LogLevel = "info"
@@ -90,6 +101,22 @@ func Load() (*Config, error) {
 	}
 
 	if err := validateLogLevel(cfg.LogLevel); err != nil {
+		return nil, err
+	}
+
+	if cfg.PositionCheckInterval, err = getDuration("POSITION_CHECK_INTERVAL"); err != nil {
+		return nil, err
+	}
+	if cfg.PositionStaleAfter, err = getDuration("POSITION_STALE_AFTER"); err != nil {
+		return nil, err
+	}
+	if cfg.PositionWorkers, err = getInt32("POSITION_WORKERS"); err != nil {
+		return nil, err
+	}
+	if cfg.PositionQueueSize, err = getInt32("POSITION_QUEUE_SIZE"); err != nil {
+		return nil, err
+	}
+	if cfg.PushRequestTimeout, err = getDuration("PUSH_REQUEST_TIMEOUT"); err != nil {
 		return nil, err
 	}
 

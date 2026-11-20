@@ -28,12 +28,13 @@ generate:
 		-package api \
 		-o internal/generated/api.gen.go \
 		contracts/openapi/trip-service.openapi.yaml
+	go generate ./...
 
 test:
 	go test -race -cover ./...
 
 test-integration:
-	go test -tags=integration -v ./internal/repository/...
+	go test -tags=integration -race -v ./internal/repository/...
 
 lint:
 	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest run

@@ -10,6 +10,7 @@ import (
 type Metrics struct {
 	TripsCreated   metric.Int64Counter
 	TripsCompleted metric.Int64Counter
+	PositionsSaved metric.Int64Counter
 }
 
 func (m *Metrics) IncTripsCreated(ctx context.Context) {
@@ -18,6 +19,10 @@ func (m *Metrics) IncTripsCreated(ctx context.Context) {
 
 func (m *Metrics) IncTripsCompleted(ctx context.Context) {
 	m.TripsCompleted.Add(ctx, 1)
+}
+
+func (m *Metrics) IncPositionsSaved(ctx context.Context) {
+	m.PositionsSaved.Add(ctx, 1)
 }
 
 func NewMetrics(activeTripsFn func(context.Context) (int64, error)) (*Metrics, error) {
@@ -29,6 +34,11 @@ func NewMetrics(activeTripsFn func(context.Context) (int64, error)) (*Metrics, e
 	}
 
 	completed, err := meter.Int64Counter("tripgo.trips.completed")
+	if err != nil {
+		return nil, err
+	}
+
+	positionsSaved, err := meter.Int64Counter("tripgo.positions.saved")
 	if err != nil {
 		return nil, err
 	}
@@ -51,5 +61,6 @@ func NewMetrics(activeTripsFn func(context.Context) (int64, error)) (*Metrics, e
 	return &Metrics{
 		TripsCreated:   created,
 		TripsCompleted: completed,
+		PositionsSaved: positionsSaved,
 	}, nil
 }

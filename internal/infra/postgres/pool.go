@@ -33,6 +33,7 @@ func NewPool(ctx context.Context, cfg *config.Config) (*pgxpool.Pool, error) {
 	}
 
 	if err := otelpgx.RecordStats(pool); err != nil {
+		pool.Close()
 		return nil, fmt.Errorf("unable to record database stats: %w", err)
 	}
 
