@@ -37,7 +37,6 @@ func run() error {
 		log.Printf("container init failed: %v", err)
 		return err
 	}
-	defer c.Close()
 
 	errCh := make(chan error, 1)
 	go func() {
@@ -48,9 +47,9 @@ func run() error {
 		}
 	}()
 
+	var serverErr error
 	select {
-	case err := <-errCh:
-		return err
+	case serverErr = <-errCh:
 	case <-ctx.Done():
 		c.Logger.Info("waiting for active requests on termination signal")
 	}
@@ -58,11 +57,18 @@ func run() error {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
 
-	if err := c.Server.Shutdown(shutdownCtx); err != nil {
-		c.Logger.Error("shutdown error", "error", err)
+	if serverErr == nil {
+		if err := c.Server.Shutdown(shutdownCtx); err != nil {
+			c.Logger.Error("shutdown error", "error", err)
+			cancelRequests()
+			_ = c.Server.Close()
+		}
+	} else {
 		cancelRequests()
 		_ = c.Server.Close()
 	}
 
-	return nil
+	c.Close(shutdownCtx)
+
+	return serverErr
 }

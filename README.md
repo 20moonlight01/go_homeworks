@@ -1,4 +1,4 @@
-# TripGo: лабораторная работа 2
+# TripGo: лабораторная работа 3
 
 HTTP-cервис поездок.
 
@@ -70,6 +70,17 @@ make run
 | `OTEL_TRACES_SAMPLER` | стратегия сэмплирования трейсов |
 | `OTEL_RESOURCE_ATTRIBUTES` | дополнительные атрибуты ресурса |
 
+Фоновые компоненты:
+
+| Переменная | Описание |
+|---|---|
+| `POSITION_CHECK_INTERVAL` | период тикера сканера |
+| `POSITION_STALE_AFTER` | через какое время, проведенное без координат, поездка считается устаревшей |
+| `POSITION_WORKERS` | количество воркеров |
+| `POSITION_QUEUE_SIZE` | ёмкость очереди задач |
+| `PUSH_HTTP_URL` | адрес Push Service |
+| `PUSH_REQUEST_TIMEOUT` | таймаут запроса в Push Service |
+
 ## API
 
 | Метод | Путь | Назначение |
@@ -79,6 +90,8 @@ make run
 | `POST` | `/api/v1/trips/{tripId}/finish` | завершить поездку |
 | `GET` | `/health` | проверить работоспособность сервера |
 | `GET` | `/ready` | проверить подключение к БД |
+| `POST` | `/api/v1/trips/{tripId}/positions` | сохранить координату |
+| `GET` | `/api/v1/trips/{tripId}/positions` | получить маршрут |
 
 ## Архитектура и слои
 
@@ -106,6 +119,12 @@ make run
 
    *Зависимости:* зависит от всех остальных пакетов. Здесь создаются конкретные реализации (например, `pgxpool.New` и репозитории).
 
+- `internal/gateway/push`: HTTP-клиент для Push Service. Интерфейс объявлен у потребителя (`worker/positions`).
+
+- `internal/worker/positions`: сканер, `pendingSet`, worker pool. Зависит от интерфейсов репозитория, gateway и метрик.
+
+- `internal/model`: общие структуры между слоями (`StaleTrip`).
+
 ### Где объявлены интерфейсы и почему
 
 Интерфейсы зависимостей объявлены там, где они используются (в пакетах `usecase`), а не там, где реализуются (в `repository` или `infra`).
@@ -120,7 +139,115 @@ make run
 
 Правильность направления зависимостей проверяется линтером `depguard` (правила описаны в `.golangci.yml`).
 
+## Опрос устаревших поездок
+
+```mermaid
+flowchart TD
+    subgraph Trigger ["Триггер (Сканер)"]
+        Ticker(["Таймер POSITION_CHECK_INTERVAL"])
+        Scanner["Сканер (1 горутина)"]
+        Ticker -- "Каждый тик" --> Scanner
+    end
+
+    subgraph Database ["PostgreSQL"]
+        DB_Trips[("trips")]
+        DB_Positions[("trip_positions")]
+    end
+
+    subgraph Deduplication ["Очередь и Дедупликация"]
+        PendingSet{"pendingSet <br/>(map + mutex)"}
+        Queue[["Очередь (канал) <br/> POSITION_QUEUE_SIZE"]]
+    end
+
+    subgraph WorkerPool ["Worker Pool (POSITION_WORKERS)"]
+        W1["Воркер 1"]
+        W2["Воркер N"]
+    end
+
+    subgraph External ["Внешний сервис"]
+        Push["Push Service"]
+    end
+
+    Scanner -- "1. SQL: SELECT stale trips <br/> (COALESCE(last_position_at, started_at) < stale_after)" --> DB_Trips
+    Scanner -- "2. TryAdd (дедупликация)" --> PendingSet
+    Scanner -- "3. Неблокирующая постановка" --> Queue
+
+    Scanner -. "Если очередь полна (default)" .-> Drop["tripgo.stale_checks{result='dropped'} <br/> + Warn лог <br/> (pending.Remove)"]
+    
+    Queue -- "4. Забирают задачи" --> W1
+    Queue -- "4. Забирают задачи" --> W2
+    W1 -- "5. Проверка и Remove" --> PendingSet
+    W2 -- "5. Проверка и Remove" --> PendingSet
+    W1 -- "6. HTTP POST (REQUEST_POSITION)" --> Push
+    W2 -- "6. HTTP POST (REQUEST_POSITION)" --> Push
+
+    Coord(["POST /positions (Хендлер)"]) -- "Пришла координата <br/> (Cancel)" --> PendingSet
+    W1 -. "Если в pendingSet нет - отмена" .-> Cancelled["tripgo.position_requests{result='cancelled'}"]
+    
+    classDef db fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef external fill:#bbf,stroke:#333,stroke-width:2px;
+    classDef worker fill:#dfd,stroke:#333,stroke-width:2px;
+    classDef warn fill:#fdd,stroke:#333,stroke-width:1px,stroke-dasharray: 5 5;
+    
+    class DB_Trips,DB_Positions db;
+    class Push external;
+    class W1,W2 worker;
+    class Drop,Cancelled warn;
+```
+
+- Сканер — одна фоновая горутина. На каждом тике (`POSITION_CHECK_INTERVAL`) выполняет один SQL-запрос: выбирает active-поездки, у которых `COALESCE(last_position_at, started_at)` старше `POSITION_STALE_AFTER`. Сортировка - от самых давно молчащих.
+
+- Дедупликация - перед постановкой в очередь сканер проверяет `pendingSet` (map под mutex). Если поездка уже там - `tripgo.stale_checks{result="duplicate"}`, повторно не ставим.
+
+- Очередь - буферизованный канал на `POSITION_QUEUE_SIZE` задач.
+
+- Воркеры - `POSITION_WORKERS` горутин. Читают задачу, проверяют, что она всё ещё в `pendingSet` (если нет - значит, пришла координата, result="cancelled"), убирают из `pendingSet`, ходят в Push Service с таймаутом `PUSH_REQUEST_TIMEOUT`.
+
+- Отмена координатой - при успешном `POST /positions` usecase вызывает `pendingSet.Cancel(trip_id)`. Задача, которая уже в канале, при обработке отбрасывается.
+
+Что произойдёт при исчерпании очереди:
+
+Если канал полон, сканер не блокируется: поездка не ставится в очередь, из `pendingSet` удаляется, инкрементится `tripgo.stale_checks{result="dropped"}`, пишется Warn-лог. Поездка не теряется: она остаётся устаревшей в БД и попадёт в выборку на следующем тике.
+
 ## Принятые в этой работе решения
+
+### Индекс под stale-выборку
+
+```sql
+CREATE INDEX CONCURRENTLY IF NOT EXISTS trips_stale_check_idx
+   ON trips (COALESCE(last_position_at, started_at))
+   WHERE status = 'active';
+```
+
+### Сканер и очередь
+
+- Сканер - одна горутина с time.Ticker, тики не накладываются: scan вызывается синхронно в select, следующий тик ждёт завершения предыдущего.
+
+- Таймер подменяем через интерфейс Ticker и TickerFactory, в тестах - MockTicker.
+
+- Очередь - буферизованный канал, постановка неблокирующая (select с default). При переполнении - dropped + Warn, pending.Remove.
+
+- Дедупликация - `pendingSet` (map + sync.Mutex), доступен сканеру, воркерам и хендлеру координаты.
+
+### Сохранение координаты
+
+- `INSERT` в `trip_positions` + `UPDATE trips.last_position_at` в одной транзакции через TxManager.
+
+- `last_position_at` обновляется через `GREATEST(COALESCE(last_position_at, $1), $1)` - старая координата не состарит поездку, сравнение в SQL, не в Go.
+
+- Если UPDATE вернул 0 rows (поездка completed или удалена) - дочитываем через GetByID, различаем 404/409, транзакция откатывается.
+
+### Worker pool и остановка
+
+- `POSITION_WORKERS` воркеров, фиксированное число, запускаются при старте.
+
+- `pending.Remove` - в двух местах: воркер (до запроса в Push) и хендлер координаты (через positionCanceller).
+
+- При остановке: `workerCancel` → сканер завершился → `close(queue)` → воркеры drain в рамках внешнего `SHUTDOWN_TIMEOUT` (передаётся из main через `StopWorkers(ctx)` / `SetDrainContext`) → `workerWG.Wait()`. drain использует `context.WithoutCancel` + внешний дедлайн, не создаёт свой таймер.
+
+- `goleak.VerifyTestMain` в `worker/positions`.
+
+## Принятые решения (ЛР 2)
 
 ### Архитектура и изоляция слоёв
 
